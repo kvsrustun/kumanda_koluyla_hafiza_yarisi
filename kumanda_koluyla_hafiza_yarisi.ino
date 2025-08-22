@@ -4,8 +4,9 @@
 OLED oled;
 Joystick joystick;
 
-const int sequenceLength = 4;
-int sequence[sequenceLength];
+int level = 1;           
+int sequenceLength = 1;   
+int sequence[10];         
 int userIndex = 0;
 
 enum Direction {LEFT = 0, RIGHT, UP, DOWN};
@@ -13,10 +14,9 @@ enum Direction {LEFT = 0, RIGHT, UP, DOWN};
 const int threshold = 300;  
 
 bool inputStarted = false;
-unsigned long startTime = 0;
-unsigned long endTime = 0;
 
 void generateSequence() {
+  sequenceLength = level;   
   for (int i = 0; i < sequenceLength; i++) {
     sequence[i] = random(0, 4);
   }
@@ -25,18 +25,25 @@ void generateSequence() {
 void showSequenceOnOLED() {
   oled.clearDisplay();
   oled.setTextXY(0, 0);
-  oled.putString("YONLER:");
+  oled.putString("Seviye: ");
+  oled.putInt(level);
 
   oled.setTextXY(1, 0);
+  oled.putString("YONLER:");
+
+  oled.setTextXY(2, 0);
   for (int i = 0; i < sequenceLength; i++) {
     switch(sequence[i]) {
-      case LEFT:  oled.putString("Sol "); break;
-      case RIGHT: oled.putString("Sag "); break;
-      case UP:    oled.putString("Yukari "); break;
-      case DOWN:  oled.putString("Asagi "); break;
+      case LEFT:  oled.putString("Sol"); break;
+      case RIGHT: oled.putString("Sag"); break;
+      case UP:    oled.putString("Yukari"); break;
+      case DOWN:  oled.putString("Asagi"); break;
+    }
+    if (i < sequenceLength - 1) {
+      oled.putString(" | ");
     }
   }
-  delay(5000);
+  delay(4000);
   oled.clearDisplay();
 }
 
@@ -44,10 +51,10 @@ int getJoystickDirection() {
   int x = joystick.xRead(); 
   int y = joystick.yRead();
 
-  if (x < (512 - threshold)) return RIGHT;
-  if (x > (512 + threshold)) return LEFT;
-  if (y < (512 - threshold)) return UP;
-  if (y > (512 + threshold)) return DOWN;
+  if (x < (512 - threshold)) return DOWN;   
+  if (x > (512 + threshold)) return UP;    
+  if (y < (512 - threshold)) return RIGHT;
+  if (y > (512 + threshold)) return LEFT;
 
   return -1;  
 }
@@ -70,8 +77,8 @@ void setup() {
   generateSequence();
   showSequenceOnOLED();
 
-  oled.setTextXY(0, 0);
-  oled.putString("Giris yapiniz");
+  oled.setTextXY(4, 0);
+  oled.putString("Giris yapiniz...");
 }
 
 void loop() {
@@ -80,68 +87,55 @@ void loop() {
   if (dir != -1) {
     if (!inputStarted) {
       inputStarted = true;
-      startTime = millis();
       userIndex = 0;
     }
 
-    delay(300); 
+    delay(300); // Hızlı giriş için kısa bekleme
 
-    oled.clearDisplay();
-    oled.setTextXY(0, 0);
-    oled.putString("Girdi: ");
-
-    switch (dir) {
-      case LEFT:  oled.putString("Sol"); break;
-      case RIGHT: oled.putString("Sag"); break;
-      case UP:    oled.putString("Yukari"); break;
-      case DOWN:  oled.putString("Asagi"); break;
-    }
-
+    // Kullanıcının girdiği yön doğru mu kontrol et
     if (dir == sequence[userIndex]) {
       userIndex++;
+
+      // Eğer kullanıcı tüm diziyi doğru girdi ise
       if (userIndex == sequenceLength) {
-        endTime = millis();
-        unsigned long elapsed = endTime - startTime;
-
         oled.clearDisplay();
-        oled.setTextXY(0, 0);
+        oled.setTextXY(2, 2);
         oled.putString("Tebrikler!");
-        oled.setTextXY(1, 0);
-        oled.putString("Sure(ms):");
-        oled.setTextXY(2, 0);
-        oled.putInt(elapsed);
+        delay(1000);
 
-        delay(1500);  
-        
+        level++;
+        if (level > 10) level = 1;
+
         userIndex = 0;
         inputStarted = false;
+
         generateSequence();
         showSequenceOnOLED();
 
-        oled.setTextXY(0, 0);
-        oled.putString("Giris yapiniz");
+        oled.setTextXY(4, 0);
+        oled.putString("Giris yapiniz...");
       }
+
     } else {
-    
+      // Yanlış giriş: tekrar başa dön
+      level = 1;
       userIndex = 0;
       inputStarted = false;
 
       oled.clearDisplay();
-      oled.setTextXY(0, 0);
+      oled.setTextXY(3, 3);
       oled.putString("Yanlis!");
-      oled.setTextXY(1, 0);
+      oled.setTextXY(4, 2);
       oled.putString("Tekrar dene");
-
-      delay(1500);
+      delay(1000);
 
       generateSequence();
       showSequenceOnOLED();
 
-      oled.clearDisplay();
-      oled.setTextXY(0, 0);
-      oled.putString("Giris yapiniz");
+      oled.setTextXY(4, 0);
+      oled.putString("Giris yapiniz...");
     }
 
-    delay(500); 
+    delay(200);
   }
 }
